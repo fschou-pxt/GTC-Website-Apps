@@ -1,0 +1,10 @@
+timestamp,timezone,registrantType,firstName,lastName,gmail,affiliation,title,username,approved,access_granted
+NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+2023-01-02T06:54:38Z,Etc/UTC,Parent,Zoe,Chou,fschou@gmail.com,,,zoe,NA,NA
+2023-01-03T08:46:04Z,Etc/UTC,Parent,Fu-Sheng,Chou,fschou@gmail.com,KP,Neonatologist,fschou,NA,NA
+2023-01-03T08:50:05Z,Etc/UTC,Parent,Pei-Shan,Wang,fschou@gmail.com,,,pswang,NA,NA
+2023-01-03T08:52:15Z,Etc/UTC,Parent,Fu-Sheng,Chou,fschou@gmail.com,,,fschou1,NA,NA
+2023-01-06T01:31:26Z,Etc/UTC,Neonatal Care Provider,Izabela,Oluwole,izabelaolu@gmail.com,,,izaoluwole,NA,NA
+2023-01-07T05:17:10Z,Etc/UTC,Parent,Fu-Sheng,Chou,fschou@zohomail.com,,,fschou2,NA,NA
+2023-01-08T19:06:29Z,Etc/UTC,Parent,john,smith,john.smith@gmail.com,,,john.smith,NA,NA
+2023-01-09T20:06:48Z,Etc/UTC,Neonatal Care Provider,Srina,Rao,s.srina.rao@gmail.com,,,srao,NA,NA

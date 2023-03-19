@@ -1,0 +1,34 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+color_palatte <- 
+    tribble( 
+        ~color1,   ~color2,   ~color3,   ~color4,   ~color5,   ~color6,   ~color7,   ~color8,   ~color9,
+        "#F1C232", "#445760", "#546E7A", "#7895A2", "#AAAAAA", "#DDDDDD", "#F0F0F0", "#FFFFFF", "#CC0000"
+    ) %>% t(.) %>% as.data.frame() %>% rownames_to_column(var = "color_order") %>% mutate(size = 1) %>% arrange(color_order)
+
+ggplot(color_palatte, aes(x = V1, y = size)) + geom_tile(aes(fill = V1)) + scale_fill_manual(values = color_palatte$V1)
+
+
+weight_plot
+
+weight_plot_output <- ggplot(mtcars, aes(x = mpg, y = cyl)) + geom_point()
+weight_plot_output
+
+pdf("file.pdf", width = 7, height = 7)
+            ggplot(mtcars, aes(x = mpg, y = cyl)) + geom_point()
+            dev.off()
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
