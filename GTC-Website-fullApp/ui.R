@@ -24,8 +24,7 @@ shinyUI(
                           div(class="col-lg-6 col-md-6 col-sm-6",
                               div(align="right", style="margin:15px;",
                                   actionButton("restore_box", "RESTORE ALL PANELS", class = "gtc-button", icon = tags$i(class="fa-solid fa-diagram-predecessor")),
-                                  actionButton("settings_button", "OPEN SETTINGS", icon = tags$i(class="fa-solid fa-gear"), class = "gtc-button")))
-                          ),
+                                  actionButton("settings_button", "OPEN SETTINGS", icon = tags$i(class="fa-solid fa-gear"), class = "gtc-button")))),
                       uiOutput("settings"),
                       box(id = "input_box",
                           title = span("INPUT", class = "box-header-title"),
@@ -65,9 +64,9 @@ shinyUI(
                                   fluidRow(
                                       div(DTOutput("meas_table"), style = "height:400px;padding-right:12px;font-size:11px;"),
                                       div(column(12, align="right", style="padding:8px 15px 0 0;",
-                                                 actionButton("delete_record", icon = tags$i(class="fa-solid fa-trash-can"), "DELETE RECORD", class = "gtc-button"),
-                                                 actionButton("save_data", icon = tags$i(class="fa-solid fa-server"), "SAVE DATA", class = "gtc-button"),
-                                                 actionButton("calculate", icon = tags$i(class="fa-solid fa-chart-line"), "UPDATE TRAJECTORY", class = "gtc-button")
+                                                 hidden(actionButton("delete_record", icon = tags$i(class="fa-solid fa-trash-can"), "DELETE RECORD", class = "gtc-button")),
+                                                 hidden(actionButton("save_data", icon = tags$i(class="fa-solid fa-server"), "SAVE DATA", class = "gtc-button")),
+                                                 hidden(actionButton("calculate", icon = tags$i(class="fa-solid fa-chart-line"), "UPDATE TRAJECTORY", class = "gtc-button"))
                                                  
                                       ))))
                           )

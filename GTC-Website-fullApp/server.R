@@ -14,7 +14,7 @@ library(patchwork)
 # dbDisconnect(con, shutdown = T)
 
 shinyServer(function(input, output, session) {
-
+    
     color_palette <- 
         tribble( 
             ~color1,   ~color2,   ~color3,   ~color4,   ~color5,   ~color6,   ~color7,   ~color8,   ~color9,
@@ -83,7 +83,7 @@ shinyServer(function(input, output, session) {
             ) %>%
             mutate(Week = PMA %/% 7, Day = PMA %% 7)   
         rv$proxy <- rv$dt
-        output$table <- renderUI({})
+        #output$meas_table <- renderUI({})
         output$weight_plot <- renderPlotly({})
         output$length_plot <- renderPlotly({})
         output$HC_plot     <- renderPlotly({})
@@ -132,6 +132,7 @@ shinyServer(function(input, output, session) {
         runjs(paste0("$('#GA_sex_select_div').css('background-color','", colors$color4, "')"))
         runjs(paste0("$('.line').css('background-color','", colors$color3, "')"))
         runjs(paste0("$('.meas-box').css('color','", colors$color3, "')"))
+        runjs(paste0("$('.msg-box').css('color','", colors$color7, "')"))
         runjs(paste0("$('.box-header-title').css('color','", colors$color3, "')"))
         runjs(paste0("$('.meas-info-box').css('background-color','", colors$color7, "').css('box-shadow','3px 3px 1px ", colors$color5, "')"))
         runjs(paste0("$('.gtc-button').css('color','", colors$color3, "').css('background-color','", colors$color6, "')"))
@@ -405,25 +406,25 @@ shinyServer(function(input, output, session) {
         
         if (is.na(GAn)) {
             output$msg <- renderUI({
-                div(style="color:#cc0000;font-weight:500;font-size:16px;", "Please select/create an ID or enter GA!")
+                div(class = "msg-box", "Please select/create an ID or enter GA!")
             })
-            output$table <- renderUI({})
+            #output$meas_table <- renderUI({})
         } else if (GAn<=22 | GAn>=31) {
             output$msg <- renderUI({
-                div(style="color:#cc0000;font-weight:500;font-size:16px;", "GA Out of Range!")
+                div(class = "msg-box", "GA Out of Range!")
             })
-            output$table <- renderUI({})
+            #output$meas_table <- renderUI({})
         } else if (GAn>22 & GAn<31) {
             
             if (input$sex == "") {
                 output$msg <- renderUI({
-                    div(style="color:#cc0000;font-weight:500;font-size:16px;", "Please enter infant sex!")
+                    div(class = "msg-box", "Please enter infant sex!")
                 })
-                output$table <- renderUI({})
+                #output$meas_table <- renderUI({})
                 
             } else if (input$sex %in% c("Male", "Female")) {
                 rv$hasDisplay = 1
-                
+
                 ### retrieve data
                 con <- dbConnect(duckdb::duckdb(), dbdir="~/Apps/GTC-Website-Apps/GTC-DB/db.duckdb", read_only=TRUE)
                 rv$Chou_weight <- dbGetQuery(con, paste0("SELECT * FROM GA",GAn,"_",req(input$sex),"_Weight")) %>% mutate(percentile = as.numeric(NA))
@@ -588,7 +589,11 @@ shinyServer(function(input, output, session) {
                 updateBox("length_box", action = "toggle")
                 updateBox("HC_box", action = "toggle")
                 updateBox("output_box", action = "restore")
-                
+                               
+                ### Show buttons
+                shinyjs::show("delete_record")
+                shinyjs::show("save_data")
+                shinyjs::show("calculate") 
             }
             
         } 
@@ -913,11 +918,20 @@ shinyServer(function(input, output, session) {
             if (rv$hasDisplay == 1) {
                 pdf(file, width = rv$plot_width_x, height = rv$plot_height_y)
                 if (rv$layout == "vertical") {
-                    print((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))))
+                    print(((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch")))) +
+                            plot_annotation(subtitle = "nicugrowth.app", 
+                                            title = "Chou's Postnatal Growth Trajectory Curves",
+                                            caption = "Contact us at admin@nicugrowth.app for any questions!"))
                 } else if (rv$layout == "horizontal") {
-                    print((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | (plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))))
+                    print(((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | (plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch")))) +
+                            plot_annotation(subtitle = "nicugrowth.app", 
+                                            title = "Chou's Postnatal Growth Trajectory Curves",
+                                            caption = "Contact us at admin@nicugrowth.app for any questions!"))
                 } else if (rv$layout == "plate") {
-                    print((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | ((plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch")))))
+                    print(((plots$weight_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) | ((plots$length_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))) / (plots$HC_plot & theme(plot.margin = margin(0.1,0.1,0.1,0.1,"inch"))))) +
+                            plot_annotation(subtitle = "nicugrowth.app", 
+                                            title = "Chou's Postnatal Growth Trajectory Curves",
+                                            caption = "Contact us at admin@nicugrowth.app for any questions!"))
                 }
             }
             dev.off()
