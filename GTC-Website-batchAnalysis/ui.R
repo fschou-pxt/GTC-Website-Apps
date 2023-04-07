@@ -2,9 +2,7 @@ library(shiny)
 library(shinydashboard)
 library(shinydashboardPlus)
 library(shinyjs)
-library(shinydisconnect)
 library(shinyWidgets)
-library(plotly)
 library(DT)
 
 graph_choices <- c("Choose One..." = "", 
@@ -67,17 +65,19 @@ shinyUI(
                                                  ),
                                                  hr(),
                                                  div(hidden(actionButton("plot", icon = tags$i(class="fa-solid fa-jet-fighter-up"), span("TIDY THE DATASET", tags$i(class="fa-solid fa-jet-fighter-up")), width = "100%", class = "gtc-button")),
-                                                     hr(),
-                                                     hidden(actionButton("analyzedTable", icon = tags$i(class="fa-solid fa-file-circle-check"), span("THIS TABLE HAS",br(), "ALREADY BEEN ANALYZED"), width="100%", class = "gtc-button"))
+                                                     br(), br(),
+                                                     hidden(actionButton("analyzedTable", icon = tags$i(class="fa-solid fa-file-circle-check"), span("THIS IS A",br(), "POST-ANALYSIS TABLE"), width="100%", class = "gtc-button"))
                                                  ),
                                                  br(),
                                                  uiOutput("msg")))
                         ),
                         div(class="col-lg-9 col-md-9 col-sm-9", #style="height:680px;",
                             fluidRow(
-                              div(DTOutput("meas_table"), style = "height:640px;padding-right:12px;font-size:11px;"),
+                              div(uiOutput("meas_table_UI")),
                               div(column(12, align="right", style="padding:8px 15px 0 0;",
-                                         hidden(actionButton("calculate", icon = tags$i(class="fa-solid fa-chart-line"), "ANALYZE", class = "gtc-button"))
+                                         hidden(checkboxInput("includeTP", "Include trajectory percentile calculation")),
+                                         hidden(actionButton("calculate", icon = tags$i(class="fa-solid fa-chart-line"), "ANALYZE", class = "gtc-button")),
+                                         hidden(downloadButton("save_dt", "DOWNLOAD TABLE", class = "gtc-button"))
                                          
                               ))))
                       )

@@ -26,6 +26,31 @@ shinyUI(
                                   actionButton("restore_box", "RESTORE ALL PANELS", class = "gtc-button", icon = tags$i(class="fa-solid fa-diagram-predecessor")),
                                   actionButton("settings_button", "OPEN SETTINGS", icon = tags$i(class="fa-solid fa-gear"), class = "gtc-button")))),
                       uiOutput("settings"),
+                      box(id = "instructions",
+                          title = span("INSTRUCTIONS", style="color:white;"),
+                          collapsible = FALSE,
+                          closable = TRUE,
+                          status = "danger",
+                          solidHeader = TRUE,
+                          width = 12,
+                          fluidRow(
+                            column(12,
+                                   HTML('
+                                        <div style="line-height:200%;">
+<ul>
+<li>Please sign in using the registered account. If you do not have an account yet, please click <a href="https://sites.google.com/nicugrowth.app/nicugrowth-app/webapp/register" target="_blank">here</a> to register.</li>
+<li>After signing in, select an infant from the list, or add an infant by selecting <span class="instructionButton">CREATE A NEW ID</span>.</li>
+<li>To load the anthropometric data table, click <span class="instructionButton">READY-SET-GO</span>.</li>
+<li>To add/modify/delete a measurement value, double-click on the corresponding cell.</li>
+<li>To save the table, click <span class="instructionButton">SAVE DATA</span>.</li>
+<li>To delete the entire record for the selected infant, click <span class="instructionButton">DELETE RECORD</span>.</li>
+<li>To calculate trajectory percentile, click <span class="instructionButton">UPDATE TRAJECTORY</span>.</li>
+<li>To save data table and/or plot, expand <span class="instructionButton">OUTPUT</span> box by clicking on the plus sign on the right side.</li>
+<li>To save the plot, select Paper Size, Orientation, and Layout, then click <span class="instructionButton">DOWNLOAD PLOT</span>. </li>
+<li>To save the data table, select File Format and Columns to download, then click <span class="instructionButton">DOWNLOAD TABLE</span>. 
+</ul>
+</div>'
+                          )))),
                       box(id = "input_box",
                           title = span("INPUT", class = "box-header-title"),
                           collapsible = TRUE,

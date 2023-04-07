@@ -2,10 +2,10 @@ library(shiny)
 library(duckdb)
 library(DBI)
 library(tidyverse)
+library(lubridate)
 library(DT)
 library(shinyjs)
 library(safer)
-library(plotly)
 library(patchwork)
 library(gt)
 
@@ -19,6 +19,7 @@ shinyServer(function(input, output, session) {
   source("analysis-functions/delta-Z-first-last.R")
   source("analysis-functions/delta-Z-first-36orLast.R")
   
+  options(shiny.maxRequestSize = 10*1024^2)
   
   color_palette <- 
     tribble( 
@@ -296,12 +297,14 @@ shinyServer(function(input, output, session) {
                 <ul>
                   <li>The data table can be in CSV or XLSX format.</li>
                   <li>When using the XLSX format, place the data table on the first worksheet.</li>
-                  <li>The data table has to include ID, GA_week, GA_day, DOL columns with corresponding column names.</li>
-                  <li>GA_week & GA_day are birth GA. Only need to appear once for each ID</li>
+                  <li>The data table has to include ID, Sex, GA_week, GA_day, DOL columns with corresponding column names.</li>
+                  <li>The WebApp is case-sensitive.</li>
+                  <li>GA_week & GA_day are birth GA. Only need to appear once for each ID.</li>
                </ul>
               "
               ))
         })
+
       }
     }
   })
@@ -329,8 +332,9 @@ shinyServer(function(input, output, session) {
                   <li>The data table can be in CSV or XLSX format.</li>
                   <li>When using the XLSX format, place the data table on the first worksheet.</li>
                   <li>The data table has to include ID, Sex, GA_week, GA_day, DOL columns with corresponding column names.</li>
-                  <li>GA_week & GA_day are birth GA. Only need to appear once for each ID</li>
-                </ul>
+                  <li>The WebApp is case-sensitive.</li>
+                  <li>GA_week & GA_day are birth GA. Only need to appear once for each ID.</li>
+               </ul>
               "
             ))
       })
@@ -357,13 +361,17 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$plot, {
-
-    if (nrow(rv$uploaded_dt) == 0) {
+    withProgress(message = "Tidying the dataset",
+                 value = 0,
+                 {
+                   setProgress(0.1, "Checking...")
+                   if (nrow(rv$uploaded_dt) == 0) {
       output$msg <- renderUI({
         span(style="color:red;", "Please upload a datatable first!")
       })
     } else if (nrow(rv$uploaded_dt) > 0) {
       output$msg <- renderUI({})
+      setProgress(0.2, "Upload successfully...")
       
       if (length(input$weightColumn) == 0 | input$weightColumn == "") {
         weight = 0
@@ -382,21 +390,23 @@ shinyServer(function(input, output, session) {
       } else {
         HC = 1
       }
+      setProgress(0.3, "Columns triaged...")
       
       if (weight + length + HC == 0) {
-        
+
         output$msg <- renderUI({
           span(style="color:red;", "Assign at least one measurement column!")
         })
         
       } else if ((weight + length + HC) > 0) {
+        setProgress(0.4, "Column selection checked...")
         if (any(input$weightColumn != "" & input$weightColumn == input$lengthColumn, 
                 input$lengthColumn != "" & input$lengthColumn == input$HCColumn, 
                 input$HCColumn !="" & input$HCColumn == input$weightColumn)) {
           output$msg <- renderUI({
             span(style="color:red;", paste0("One column was selected twice."))
           })
-          output$meas_table <- renderDT({})
+          output$meas_table_UI <- renderUI({})
         } else {
           output$msg <- renderUI({})
           checkGA <- rv$uploaded_dt %>% 
@@ -422,10 +432,8 @@ shinyServer(function(input, output, session) {
                 span(style="color:red;", paste0("More than one sex assigned to ID ", paste0(IDissue, collapse =", "), "."))
               })
             } else if (all(checkSex$n == 1)) {
-              withProgress(message = "Tidying the dataset",
-                           value = 0,
-                           {
-                             setProgress(0.1, "Verify data type...")
+
+                             setProgress(0.5, "Verify data type...")
                              rv$dtTidy <- rv$uploaded_dt %>%
                                mutate(
                                  ID = as.factor(ID),
@@ -439,8 +447,9 @@ shinyServer(function(input, output, session) {
                                fill(GA_day, .direction = "downup") %>%
                                fill(Sex, .direction = "downup") %>%
                                ungroup()
+                             rv$uploaded_dt <- data.frame()
                              
-                             setProgress(0.3, "Grouping columns...")
+                             setProgress(0.7, "Grouping columns...")
                              if (length(input$groupingColumns) > 0) {
                                for (i in input$groupingColumns) {
                                  rv$dtTidy <- rv$dtTidy %>% fill(starts_with(i) & ends_with(i), .direction = "downup")
@@ -454,7 +463,7 @@ shinyServer(function(input, output, session) {
                                         `_Group` = as.factor(`_Group`))
                              }
                              
-                             setProgress(0.5, "Rearrange measurement values...")
+                             setProgress(0.8, "Rearrange measurement values...")
                              if (weight == 1) {
                                rv$dtTidy$`_Weight` <- as.numeric(rv$dtTidy[[input$weightColumn]])
                              }
@@ -466,20 +475,28 @@ shinyServer(function(input, output, session) {
                              }
                              rv$dtTidy[c(input$weightColumn, input$lengthColumn, input$HCColumn)] <- NULL
                              
-                             setProgress(0.7, "Extract columns...")
+                             setProgress(0.9, "Extract columns...")
                              col <- intersect(c("ID", "Sex", "GA_week", "GA_day", "DOL", "_Weight", "_Length", "_HeadCircumference", "_Group"), colnames(rv$dtTidy))
                              rv$dtTidy <- rv$dtTidy %>% select(col)
                              rv$dt <- rv$dtTidy
                              setProgress(1, "Task completed...")
-                           }
-              )
+
               
               ### Show buttons
+              shinyjs::show("includeTP")
               shinyjs::show("calculate") 
+              shinyjs::show("save_dt") 
               
               ### Update graph boxes
               reset_graph_box(session, input, output)
               
+              ### show table UI
+              
+              output$meas_table_UI <- renderUI({
+                div(div(id = "recordsPerPage", style="padding-bottom:6px;", "Up to 10,000 records per page"),
+                    DTOutput("meas_table"), style = "height:640px;padding-right:12px;font-size:11px;")
+                
+              })
             }
             
             
@@ -488,24 +505,74 @@ shinyServer(function(input, output, session) {
         }
       }
     }
-  
+    }
+              )
     
   })
   
+  
   observeEvent(input$analyzedTable, {
     hide("calculate")
+    hide("includeTP")
     output$msg <- renderUI({})
     
     rv$dt <- rv$uploaded_dt
     rv$dtZ <- rv$uploaded_dt
-    col <- c("ID", "Group", "_Weight Percentile", "_Length Percentile", "_HeadCircumference Percentile")
-    rv$dtTP <- rv$uploaded_dt %>% 
-      select(any_of(col)) %>%
-      unique(.)
+    col <- c("_Weight Percentile", "_Length Percentile", "_HeadCircumference Percentile")
+    if ("_Group" %in% colnames(rv$uploaded_dt)) {
+      if (any(col %in% colnames(rv$uploaded_dt))) {
+        rv$dtTP <- rv$uploaded_dt %>% 
+          select(any_of(c("ID", "_Group", col))) %>%
+          unique(.)
+        
+        output$meas_table_UI <- renderUI({
+          div(div(id = "recordsPerPage", style="padding-bottom:6px;", "Up to 10,000 records per page"),
+              DTOutput("meas_table"), style = "height:640px;padding-right:12px;font-size:11px;")
+          
+        })
+        
+        rv$uploaded_dt <- data.frame()
+        
+      } else {
+        output$msg <-renderUI({
+          span(style="color:red;", "It appears this table has not been analyzed!")
+        })
+      }
+    } else {
+      output$msg <-renderUI({
+        span(style="color:red;", "It appears this table has not been analyzed!")
+      })
+    }
     
+
   })
   
+  
+  observeEvent(rv$dtTidy, {
+    if (nrow(rv$dtTidy) > 0) {
+      if ("_Weight" %in% colnames(rv$dtTidy)) {
+        if (mean(rv$dtTidy$`_Weight`, na.rm = TRUE) < 10) {
+          showModal(
+            modalDialog("Is weight data in kilograms?",
+                        "Covert to grams?",
+                        footer = tagList(actionButton("convertToGrams", "CONVERT"), modalButton("CANCEL"))
+            )
+          )
+        }
+      }
+      
+    }
+  })
+  
+  observeEvent(input$convertToGrams, {
+    
+    rv$dtTidy$`_Weight` = 1000 * rv$dtTidy$`_Weight`
+    removeModal()
+    rv$dt <- rv$dtTidy
+  })
+
   observeEvent(rv$dt, {
+    
     output$meas_table <- renderDT({
       datatable(rv$dt, 
                 rownames = FALSE, 
@@ -513,8 +580,9 @@ shinyServer(function(input, output, session) {
                 selection = "none", 
                 extensions = "Buttons",
                 callback=JS('$(\'div.has-feedback input[type="search"]\').attr( "placeholder", "" )'),
-                options = list(dom = "Bt", 
-                               paging = FALSE,
+                options = list(dom = "Btpr", 
+                               #paging = FALSE,
+                               pageLength = 10000,
                                scrollY = "500",
                                scrollX = TRUE,
                                buttons = list(
@@ -548,24 +616,37 @@ shinyServer(function(input, output, session) {
         span(style="color:red;", paste0("More than one group assignment present in the data for ID ", paste0(IDissue, collapse =", "), "."), br(), "Analaysis aborted.")
       })
     } else if (all(checkGroup$n == 1)) {
-      Weight <- calculate_Z(data = rv$dtTidy, type = "Weight")
-      Length <- calculate_Z(data = rv$dtTidy, type = "Length")
-      HC <- calculate_Z(data = rv$dtTidy, type = "HeadCircumference")
+      withProgress(value= 0.5, message = "Calculating Z", {
+        Weight <- calculate_Z(data = rv$dtTidy, type = "Weight")
+        Length <- calculate_Z(data = rv$dtTidy, type = "Length")
+        HC <- calculate_Z(data = rv$dtTidy, type = "HeadCircumference")
+      })
       
       col <- c("ID", "Sex", "GA_week", "GA_day", "GAn", "DOL", "Day", "_Weight", "_Weight Z", "_Length", "_Length Z", "_HeadCircumference", "_HeadCircumference Z", "_Group")
       rv$dtZ <- Weight[intersect(col, colnames(Weight))] %>% full_join(Length[intersect(col, colnames(Length))]) %>% full_join(HC[intersect(col, colnames(HC))]) 
       
+      if (input$includeTP) {
+        Weight_percentile <- Weight %>% FindPercentileForAll(., "Weight", 1000, colors, input$id)
+        Length_percentile <- Length %>% FindPercentileForAll(., "Length", 1, colors, input$id)
+        HC_percentile <- HC %>% FindPercentileForAll(., "HeadCircumference", 1, colors, input$id)
+        
+        rv$dtTP <- Weight_percentile %>% left_join(Length_percentile) %>% left_join(HC_percentile) %>% select(ID, Group, everything()) %>%
+          rename(`_Group` = Group)
+        
+        rv$dtZ <- rv$dtZ %>% left_join(rv$dtTP)
+      }
       
-      Weight_percentile <- Weight %>% FindPercentileForAll(., "Weight", 1000, colors)
-      Length_percentile <- Length %>% FindPercentileForAll(., "Length", 1000, colors)
-      HC_percentile <- HC %>% FindPercentileForAll(., "HeadCircumference", 1000, colors)
-      
-      rv$dtTP <- Weight_percentile %>% left_join(Length_percentile) %>% left_join(HC_percentile) %>%
-        select(ID, Group, everything())
-      
-      rv$dtZ <- rv$dtZ %>% left_join(rv$dtTP)
       
       rv$dt <- rv$dtZ
+      
+      ## autosave function for myself
+      if (input$id %in% "fschou1") {
+        write_csv(rv$dt, paste0("dt_Z_TP", now(), ".csv"))
+      }
+      
+      output$msg <- renderUI({
+        span(style="color:red;", "Analysis completed!!!")
+      })
       
       updateBox("weight_box", action = "toggle")
       updateBox("length_box", action = "toggle")
@@ -616,25 +697,32 @@ shinyServer(function(input, output, session) {
             theme(axis.text = element_text(size = 10))
         })
       } else if (input$weight_type_analysis == "4") {
-        rv$dt <- rv$dtTP
-        content <- TP_comparison(rv$dtTP, "Weight", colors, input$font_selection)
-        
-        output$weight_UI <- renderUI({
-          fluidRow(column(6, plotOutput("weight_TP_plot")),
-                   column(6, gt_output("weight_TP_comTable")))
-        })
-        
-        output$weight_TP_plot <- renderPlot({content[[2]]})
-        output$weight_TP_comTable <- render_gt({content[[1]]}, width = "100%")
+        if (nrow(rv$dtTP) > 0) {
+          
+          rv$dt <- rv$dtTP
+          content <- TP_comparison(rv$dtTP, "Weight", colors, input$font_selection)
+          
+          output$weight_UI <- renderUI({
+            fluidRow(column(6, plotOutput("weight_TP_plot")),
+                     column(6, gt_output("weight_TP_comTable")))
+          })
+          
+          output$weight_TP_plot <- renderPlot({content[[2]]})
+          output$weight_TP_comTable <- render_gt({content[[1]]}, width = "100%")
+          
+        } else {
+          output$weight_UI <- renderUI({})
+        }
         
       } else if (input$weight_type_analysis == "5") {
-        
         content <- delta_Z_first_last(rv$dtZ, "Weight", colors, input$font_selection)
         rv$dt <- content[[1]]
         
         output$weight_UI <- renderUI({
-          fluidRow(column(6, plotOutput("weight_Z_Score_plot")),
-                   column(6, gt_output("weight_Z_Score_comTable")))
+          fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
+            column(6, plotOutput("weight_Z_Score_plot")),
+            column(6, gt_output("weight_Z_Score_comTable")))
         })
         
         output$weight_Z_Score_plot <- renderPlot({content[[2]]})
@@ -647,6 +735,7 @@ shinyServer(function(input, output, session) {
         
         output$weight_UI <- renderUI({
           fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
             column(6, plotOutput("weight_Z_Score_plot")),
             column(6, gt_output("weight_Z_Score_comTable")))
         })
@@ -670,8 +759,10 @@ shinyServer(function(input, output, session) {
       } else if (input$length_type_analysis == "2") {
         rv$dt <- rv$dtZ
         output$length_UI <- renderUI({
-          fluidRow(column(6, plotOutput("length_z_plot")),
-                   column(6, plotOutput("length_z_plot_facet")))
+          fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
+            column(6, plotOutput("length_z_plot")),
+            column(6, plotOutput("length_z_plot_facet")))
         })
         
         plotbyZ <- plot_by_Z(rv$dtZ, "Length", colors = colors, input$font_selection)
@@ -685,8 +776,10 @@ shinyServer(function(input, output, session) {
       } else if (input$length_type_analysis == "3") {
         rv$dt <- rv$dtZ
         output$length_UI <- renderUI({
-          fluidRow(column(6, plotOutput("length_percentile_plot")),
-                   column(6, plotOutput("length_percentile_plot_facet")))
+          fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
+            column(6, plotOutput("length_percentile_plot")),
+            column(6, plotOutput("length_percentile_plot_facet")))
         })
         
         plotbyPercentile <- plot_by_Percentile(rv$dtZ, "Length", colors = colors, input$font_selection)
@@ -698,25 +791,33 @@ shinyServer(function(input, output, session) {
             theme(axis.text = element_text(size = 10))
         })
       } else if (input$length_type_analysis == "4") {
-        rv$dt <- rv$dtTP
-        content <- TP_comparison(rv$dtTP, "Length", colors, input$font_selection)
-        
-        output$length_UI <- renderUI({
-          fluidRow(column(6, plotOutput("length_TP_plot")),
-                   column(6, gt_output("length_TP_comTable")))
-        })
-        
-        output$length_TP_plot <- renderPlot({content[[2]]})
-        output$length_TP_comTable <- render_gt({content[[1]]}, width = "100%")
-        
+        if (nrow(rv$dtTP) > 0) {
+          rv$dt <- rv$dtTP
+          content <- TP_comparison(rv$dtTP, "Length", colors, input$font_selection)
+          
+          output$length_UI <- renderUI({
+            fluidRow(
+              column(12, "Infants will only 1 measurement are excluded."),
+              column(6, plotOutput("length_TP_plot")),
+              column(6, gt_output("length_TP_comTable")))
+          })
+          
+          output$length_TP_plot <- renderPlot({content[[2]]})
+          output$length_TP_comTable <- render_gt({content[[1]]}, width = "100%")          
+        } else {
+          output$length_UI <- ({})
+        }
+
       } else if (input$length_type_analysis == "5") {
         
         content <- delta_Z_first_last(rv$dtZ, "Length", colors, input$font_selection)
         rv$dt <- content[[1]]
         
         output$length_UI <- renderUI({
-          fluidRow(column(6, plotOutput("length_Z_Score_plot")),
-                   column(6, gt_output("length_Z_Score_comTable")))
+          fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
+            column(6, plotOutput("length_Z_Score_plot")),
+            column(6, gt_output("length_Z_Score_comTable")))
         })
         
         output$length_Z_Score_plot <- renderPlot({content[[2]]})
@@ -729,6 +830,7 @@ shinyServer(function(input, output, session) {
         
         output$length_UI <- renderUI({
           fluidRow(
+            column(12, "Infants will only 1 measurement are excluded."),
             column(6, plotOutput("length_Z_Score_plot")),
             column(6, gt_output("length_Z_Score_comTable")))
         })
@@ -780,16 +882,21 @@ shinyServer(function(input, output, session) {
             theme(axis.text = element_text(size = 10))
         })
       } else if (input$HC_type_analysis == "4") {
-        rv$dt <- rv$dtTP
-        content <- TP_comparison(rv$dtTP, "HeadCircumference", colors, input$font_selection)
-        
-        output$HC_UI <- renderUI({
-          fluidRow(column(6, plotOutput("HC_TP_plot")),
-                   column(6, gt_output("HC_TP_comTable")))
-        })
-        
-        output$HC_TP_plot <- renderPlot({content[[2]]})
-        output$HC_TP_comTable <- render_gt({content[[1]]}, width = "100%")
+        if (nrow(rv$dtTP) > 0) {
+          rv$dt <- rv$dtTP
+          content <- TP_comparison(rv$dtTP, "HeadCircumference", colors, input$font_selection)
+          
+          output$HC_UI <- renderUI({
+            fluidRow(column(6, plotOutput("HC_TP_plot")),
+                     column(6, gt_output("HC_TP_comTable")))
+          })
+          
+          output$HC_TP_plot <- renderPlot({content[[2]]})
+          output$HC_TP_comTable <- render_gt({content[[1]]}, width = "100%")
+        } else {
+          output$HC_UI <- ({})
+        }
+
         
       } else if (input$HC_type_analysis == "5") {
         
@@ -845,7 +952,14 @@ shinyServer(function(input, output, session) {
     
   })
   
-
+  output$save_dt <- downloadHandler(
+    filename = function() {
+      "nicugrowth.csv"
+    },
+    content = function(file) {
+      write.csv(rv$dt, file)
+    }
+  )
   
 
   

@@ -33,3 +33,9 @@
 .box-header-title {padding:0;border:0;font-size:18px;font-weight:700;color:#546E7A;font-family:Nunito;}
 .settings-box {margin:30px;}
 .msg-box {box:#F0F0F0;font-weight:400;font-size:14px;}
+.instructionButton {
+  border:1px solid red;
+  border-radius: 2px;
+  color:red;
+  padding:1px;
+}
