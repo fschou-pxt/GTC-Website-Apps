@@ -245,27 +245,10 @@ shinyServer(function(input, output, session) {
     })
     
     observeEvent(input$signin, {
-        id <- read_csv("~/Apps/GTC-Website-Apps/GTC-Website-Registration/www/user.csv")
-        pwd <- read_csv("~/Apps/GTC-Website-Apps/GTC-Website-Registration/www/pwd.csv")
-        
-        if (!(input$id %in% id$id)) {
-            output$signin_msg <- renderUI({
-                div(style="color:#cc0000;font-weight:500;font-size:16px;", "Account does not exist! Please register.")
-            })
-            output$greeting <- renderUI({})
-        } else if (input$id %in% id$id) {
-            output$signin_msg <- renderUI({})
-            if (!(encrypt_string(input$password, key = input$id) %in% pwd$pwd)) {
-                output$signin_msg <- renderUI({
-                    div(style="color:#cc0000;font-weight:500;font-size:16px;", "Password incorrect. Please try again.")
-                })
-                output$greeting <- renderUI({})
+        output$signin_msg <- renderUI({})
                 
-            } else if (encrypt_string(input$password, key = input$id) %in% pwd$pwd) {
-                output$signin_msg <- renderUI({})
-                
-                #display name
-                name <- read_csv("~/Apps/GTC-Website-Apps/GTC-Website-Registration/www/registration.csv") %>% 
+         #display name
+            name <- read_csv("~/Apps/GTC-Website-Apps/GTC-Website-Registration/www/registration.csv") %>% 
                     filter(username %in% input$id) %>% 
                     select(firstName, lastName)
                 full.name <- paste(name$firstName, name$lastName)
@@ -288,8 +271,6 @@ shinyServer(function(input, output, session) {
                 
                 updateTabsetPanel(session, "main", "selector")
 
-            }
-        }
     })
     
     observeEvent(input$id_dropdown, {
