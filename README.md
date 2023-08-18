@@ -1,5 +1,4 @@
-# GTC-Website-Apps
-Growth trajectory curves for very preterm infants
+# Postnatal Growth Trajectory Charts for Very Preterm Infants
 
 SYSTEM REQUIREMENT:
 1. Any modern web browser (Safari, Firefox, Chrome, Edge, etc.) will work. Our preference is a Chrome-based web browser.
