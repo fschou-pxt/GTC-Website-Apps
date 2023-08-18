@@ -8,7 +8,7 @@ INSTALL QUIDE:
 1. No need to install. The web application runs inside the browser.
 
 DEMO/Instruction:
-1. Please visit nicugrowth.app and click on the Media tab on right upper corner for introductory and tutorial videos.
+1. Please visit <nicugrowth.app> and click on the Media tab on right upper corner for introductory and tutorial videos.
 
 LICENSE:
 1. GPL2/3
